@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Dompet Pintar Minimalis</title>
+
+    <!-- PWA: bisa di-install sebagai aplikasi -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Dompet Pintar">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            padding-top: env(safe-area-inset-top);
+        }
+        /* Beri ruang untuk gesture bar/notch saat berjalan sebagai aplikasi */
+        .safe-bottom { padding-bottom: calc(3.5rem + env(safe-area-inset-bottom)); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-md mx-auto p-4 sm:p-6 space-y-5 pb-56 flex-1 flex flex-col">
+
+        <!-- Header & Balance Card -->
+        <div class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-6 rounded-3xl shadow-xl relative overflow-hidden">
+            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs uppercase tracking-widest text-indigo-200 font-medium">Sisa Saldo</span>
+                <svg class="text-indigo-200 text-lg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+            </div>
+
+            <h2 id="saldoDisplay" class="text-3xl sm:text-4xl font-bold tracking-tight">Rp 0</h2>
+        </div>
+
+        <!-- Interactive History Buttons -->
+        <div class="grid grid-cols-2 gap-3">
+            <button id="openIncomeModal" class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 hover:border-emerald-200 hover:shadow-md transition-all flex items-center justify-between text-left cursor-pointer group">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+                        <svg class="text-base" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-slate-700 block">Pemasukan</span>
+                        <span id="incomeCountBadge" class="text-[10px] text-slate-400">0 catatan</span>
+                    </div>
+                </div>
+                <svg class="text-slate-400" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+
+            <button id="openExpenseModal" class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 hover:border-rose-200 hover:shadow-md transition-all flex items-center justify-between text-left cursor-pointer group">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
+                        <svg class="text-base" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-slate-700 block">Pengeluaran</span>
+                        <span id="expenseCountBadge" class="text-[10px] text-slate-400">0 catatan</span>
+                    </div>
+                </div>
+                <svg class="text-slate-400" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+        </div>
+
+        <!-- Area Deteksi Otomatis -->
+        <div id="detectArea" class="flex-1 flex flex-col items-center justify-center text-center min-h-[140px] px-2">
+            <div id="detectLabel" class="text-3xl sm:text-4xl font-extrabold tracking-wider"></div>
+            <div id="aiPreview" class="mt-2 text-xs text-slate-500 max-w-full truncate"></div>
+        </div>
+
+    </div>
+
+    <!-- Space Bar Chat / Natural Input Box -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent px-4 pt-8 safe-bottom z-40">
+        <div class="max-w-md mx-auto">
+            <form id="expenseForm">
+                <div class="relative flex items-center">
+                    <input
+                        type="text"
+                        id="naturalInput"
+                        placeholder="Contoh: 50k gula atau top up 50rb didin..."
+                        class="w-full pl-5 pr-16 py-5 bg-white border border-slate-200 rounded-3xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-base shadow-lg"
+                        autocomplete="off"
+                        required
+                    >
+                    <button
+                        type="submit"
+                        class="absolute right-2.5 w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center transition-all shadow-md shadow-indigo-200 cursor-pointer">
+                        <svg class="text-xl" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Riwayat Pemasukan -->
+    <div id="incomeModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    <svg class="text-emerald-600" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg> Riwayat Pemasukan / Top Up
+                </h3>
+                <button id="closeIncomeModal" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                    <svg class="text-sm" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            <div id="incomeList" class="divide-y divide-slate-100 overflow-y-auto flex-1 p-2"></div>
+            <div id="emptyIncome" class="py-12 text-center hidden">
+                <p class="text-slate-400 text-xs">Belum ada catatan pemasukan</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Riwayat Pengeluaran -->
+    <div id="expenseModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    <svg class="text-rose-600" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg> Riwayat Pengeluaran
+                </h3>
+                <button id="closeExpenseModal" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer">
+                    <svg class="text-sm" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            <div id="expenseList" class="divide-y divide-slate-100 overflow-y-auto flex-1 p-2"></div>
+            <div id="emptyExpense" class="py-12 text-center hidden">
+                <p class="text-slate-400 text-xs">Belum ada catatan pengeluaran</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 -translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 z-50 text-sm">
+        <span id="toastIcon" class="inline-flex text-base"></span>
+        <span id="toastMessage" class="font-medium"></span>
+    </div>
+
+    <!-- JavaScript Application Logic (Firebase Firestore) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy }
+            from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+        // ====== ISI DENGAN firebaseConfig DARI FIREBASE CONSOLE ======
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqxb4zq_Cr-0Fu_cAS-t3qZ3yhlGn18QA",
+            authDomain: "app-kasir-id.firebaseapp.com",
+            projectId: "app-kasir-id",
+            storageBucket: "app-kasir-id.firebasestorage.app",
+            messagingSenderId: "336080944803",
+            appId: "1:336080944803:web:5dd46de66c339d592e4916",
+            measurementId: "G-QWZK9PND2N"
+        };
+        // =============================================================
+
+        const COLLECTION = 'dompet_pintar';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let uid = null;
+
+        let transactions = [];
+
+        const saldoDisplay = document.getElementById('saldoDisplay');
+        const incomeCountBadge = document.getElementById('incomeCountBadge');
+        const expenseCountBadge = document.getElementById('expenseCountBadge');
+
+        const expenseForm = document.getElementById('expenseForm');
+        const naturalInput = document.getElementById('naturalInput');
+        const aiPreview = document.getElementById('aiPreview');
+        const detectLabel = document.getElementById('detectLabel');
+
+        const openIncomeModal = document.getElementById('openIncomeModal');
+        const closeIncomeModal = document.getElementById('closeIncomeModal');
+        const incomeModal = document.getElementById('incomeModal');
+        const incomeList = document.getElementById('incomeList');
+        const emptyIncome = document.getElementById('emptyIncome');
+
+        const openExpenseModal = document.getElementById('openExpenseModal');
+        const closeExpenseModal = document.getElementById('closeExpenseModal');
+        const expenseModal = document.getElementById('expenseModal');
+        const expenseList = document.getElementById('expenseList');
+        const emptyExpense = document.getElementById('emptyExpense');
+
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+
+        function clearDetect() {
+            detectLabel.textContent = '';
+            aiPreview.innerHTML = '';
+        }
+
+        function esc(str) {
+            return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+        }
+
+        const TOAST_OK = `<svg class="text-emerald-400" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`;
+        const TOAST_ERR = `<svg class="text-rose-400" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>`;
+
+        let toastTimer;
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            toastIcon.innerHTML = type === 'success' ? TOAST_OK : TOAST_ERR;
+            toast.classList.remove('-translate-y-24', 'opacity-0');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('-translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+
+        // ====== FIREBASE: login anonim + sinkron data realtime ======
+        signInAnonymously(auth).catch((err) => {
+            console.error(err);
+            showToast('Gagal login ke server', 'error');
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) return;
+            uid = user.uid;
+            const q = query(collection(db, COLLECTION, uid, 'transactions'), orderBy('id', 'desc'));
+            onSnapshot(q, (snap) => {
+                transactions = snap.docs.map(d => d.data());
+                updateUI();
+            }, (err) => {
+                console.error(err);
+                showToast('Gagal memuat data (cek Rules)', 'error');
+            });
+        });
+
+        // ====== Parser input natural ======
+        function parseNaturalInput(inputStr) {
+            let text = inputStr.trim();
+            let lowerText = text.toLowerCase();
+            let amount = 0;
+            let description = text;
+            let isIncome = false;
+            let sourceOrReceiver = '';
+
+            const incomeKeywords = ['top up', 'topup', 'masuk', 'terima', 'gaji', 'transfer', 'kiriman', 'dari'];
+            if (incomeKeywords.some(keyword => lowerText.includes(keyword))) {
+                isIncome = true;
+            }
+
+            const dariMatch = text.match(/dari\s+([a-zA-Z0-9_]+)/i);
+            if (dariMatch) {
+                sourceOrReceiver = dariMatch[1];
+                description = text.replace(/dari\s+[a-zA-Z0-9_]+/i, '').trim();
+            } else if (isIncome) {
+                const words = text.split(/\s+/);
+                const lastWord = words[words.length - 1];
+                if (isNaN(parseFloat(lastWord)) && words.length > 2) {
+                    sourceOrReceiver = lastWord;
+                    description = words.slice(0, -1).join(' ');
+                }
+            }
+
+            const amountRegex = /(\d+[\d\.,]*(?:\s*(?:k|rb|ribu|jt|juta))?)/i;
+            const match = text.match(amountRegex);
+
+            if (match) {
+                const rawAmountStr = match[0];
+                let numericPart = rawAmountStr.toLowerCase();
+
+                let multiplier = 1;
+                if (numericPart.includes('k') || numericPart.includes('rb') || numericPart.includes('ribu')) {
+                    multiplier = 1000;
+                } else if (numericPart.includes('jt') || numericPart.includes('juta')) {
+                    multiplier = 1000000;
+                }
+
+                let cleanNum = numericPart.replace(/[^\d,\.]/g, '').replace(/\./g, '').replace(',', '.');
+                amount = parseFloat(cleanNum) * multiplier;
+
+                if (isNaN(amount)) amount = 0;
+                description = description.replace(rawAmountStr, '').trim();
+            }
+
+            description = description.replace(/^(pemasukan|pengeluaran|beli|bayar|top\s*up|transfer|uang\s*masuk)\s*/i, '').trim();
+            if (sourceOrReceiver) {
+                description = description.replace(new RegExp(sourceOrReceiver, 'i'), '').trim();
+            }
+
+            if (!description) {
+                description = isIncome ? (sourceOrReceiver ? `Top Up dari ${sourceOrReceiver}` : 'Pemasukan') : 'Pengeluaran';
+            } else {
+                description = description.charAt(0).toUpperCase() + description.slice(1);
+            }
+
+            return { amount, description, isIncome, sourceOrReceiver };
+        }
+
+        naturalInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (!val.trim()) { clearDetect(); return; }
+            const parsed = parseNaturalInput(val);
+            if (parsed.isIncome) {
+                detectLabel.textContent = 'PEMASUKAN';
+                detectLabel.className = 'text-3xl sm:text-4xl font-extrabold tracking-wider text-emerald-600';
+            } else {
+                detectLabel.textContent = 'PENGELUARAN';
+                detectLabel.className = 'text-3xl sm:text-4xl font-extrabold tracking-wider text-rose-600';
+            }
+            if (parsed.amount > 0) {
+                const extraInfo = parsed.sourceOrReceiver ? ` (dari ${esc(parsed.sourceOrReceiver)})` : '';
+                aiPreview.innerHTML = `<strong class="text-slate-700">${formatRupiah(parsed.amount)}</strong> - ${esc(parsed.description)}${extraInfo}`;
+            } else {
+                aiPreview.innerHTML = `<span class="text-amber-600">Nominal belum terdeteksi (contoh: 50k gula)</span>`;
+            }
+        });
+
+        // ====== Simpan transaksi ke Firestore ======
+        expenseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const textValue = naturalInput.value.trim();
+            if (!textValue) return;
+
+            const parsed = parseNaturalInput(textValue);
+            if (parsed.amount <= 0) {
+                showToast('Nominal tidak terdeteksi dengan benar.', 'error');
+                return;
+            }
+            if (!uid) {
+                showToast('Belum terhubung ke server', 'error');
+                return;
+            }
+
+            const newTx = {
+                id: Date.now(),
+                description: parsed.description,
+                amount: parsed.amount,
+                isIncome: parsed.isIncome,
+                sourceOrReceiver: parsed.sourceOrReceiver,
+                date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            };
+
+            setDoc(doc(db, COLLECTION, uid, 'transactions', String(newTx.id)), newTx)
+                .then(() => showToast('Transaksi berhasil dicatat!'))
+                .catch((err) => {
+                    console.error(err);
+                    showToast('Gagal menyimpan', 'error');
+                });
+
+            naturalInput.value = '';
+            clearDetect();
+        });
+
+        // ====== Hapus transaksi dari Firestore ======
+        window.deleteTransaction = function (id) {
+            if (!uid) return;
+            if (confirm('Apakah Anda yakin ingin menghapus catatan transaksi ini?')) {
+                deleteDoc(doc(db, COLLECTION, uid, 'transactions', String(id)))
+                    .then(() => showToast('Catatan berhasil dihapus'))
+                    .catch((err) => {
+                        console.error(err);
+                        showToast('Gagal menghapus', 'error');
+                    });
+            }
+        };
+
+        // Modal Controls
+        openIncomeModal.addEventListener('click', () => {
+            incomeModal.classList.remove('hidden');
+            incomeModal.classList.add('flex');
+        });
+        closeIncomeModal.addEventListener('click', () => {
+            incomeModal.classList.add('hidden');
+            incomeModal.classList.remove('flex');
+        });
+        incomeModal.addEventListener('click', (e) => {
+            if (e.target === incomeModal) { incomeModal.classList.add('hidden'); incomeModal.classList.remove('flex'); }
+        });
+
+        openExpenseModal.addEventListener('click', () => {
+            expenseModal.classList.remove('hidden');
+            expenseModal.classList.add('flex');
+        });
+        closeExpenseModal.addEventListener('click', () => {
+            expenseModal.classList.add('hidden');
+            expenseModal.classList.remove('flex');
+        });
+        expenseModal.addEventListener('click', (e) => {
+            if (e.target === expenseModal) { expenseModal.classList.add('hidden'); expenseModal.classList.remove('flex'); }
+        });
+
+        function updateUI() {
+            let totalExpense = 0;
+            let totalIncomeFromTx = 0;
+
+            const incomes = transactions.filter(item => item.isIncome);
+            const expenses = transactions.filter(item => !item.isIncome);
+
+            incomes.forEach(item => totalIncomeFromTx += item.amount);
+            expenses.forEach(item => totalExpense += item.amount);
+
+            saldoDisplay.textContent = formatRupiah(totalIncomeFromTx - totalExpense);
+
+            incomeCountBadge.textContent = `${incomes.length} catatan`;
+            expenseCountBadge.textContent = `${expenses.length} catatan`;
+
+            // Render Income List
+            incomeList.innerHTML = '';
+            if (incomes.length === 0) {
+                emptyIncome.classList.remove('hidden');
+            } else {
+                emptyIncome.classList.add('hidden');
+                incomes.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors rounded-2xl';
+                    let sourceBadge = item.sourceOrReceiver ? `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 ml-1.5">dari ${esc(item.sourceOrReceiver)}</span>` : '';
+                    div.innerHTML = `
+                        <div class="space-y-0.5 pr-2">
+                            <div class="flex items-center flex-wrap gap-1">
+                                <h4 class="text-sm font-medium text-slate-800">${esc(item.description)}</h4>
+                                ${sourceBadge}
+                            </div>
+                            <p class="text-[11px] text-slate-400">${esc(item.date)}</p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="text-sm font-semibold text-emerald-600">+ ${formatRupiah(item.amount)}</span>
+                            <button onclick="deleteTransaction(${Number(item.id)})" class="text-slate-300 hover:text-rose-500 transition-colors p-1.5 cursor-pointer" title="Hapus">
+                                <svg class="text-sm" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    `;
+                    incomeList.appendChild(div);
+                });
+            }
+
+            // Render Expense List
+            expenseList.innerHTML = '';
+            if (expenses.length === 0) {
+                emptyExpense.classList.remove('hidden');
+            } else {
+                emptyExpense.classList.add('hidden');
+                expenses.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors rounded-2xl';
+                    div.innerHTML = `
+                        <div class="space-y-0.5 pr-2">
+                            <h4 class="text-sm font-medium text-slate-800">${esc(item.description)}</h4>
+                            <p class="text-[11px] text-slate-400">${esc(item.date)}</p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="text-sm font-semibold text-rose-600">- ${formatRupiah(item.amount)}</span>
+                            <button onclick="deleteTransaction(${Number(item.id)})" class="text-slate-300 hover:text-rose-500 transition-colors p-1.5 cursor-pointer" title="Hapus">
+                                <svg class="text-sm" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    `;
+                    expenseList.appendChild(div);
+                });
+            }
+        }
+
+        updateUI();
+
+        // ====== PWA: daftarkan service worker ======
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch((err) => console.warn('SW gagal didaftarkan', err));
+            });
+        }
+    </script>
+</body>
+</html>
